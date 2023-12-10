@@ -1,6 +1,8 @@
 #ifndef CONFIG_H
 #define CONFIG_H
-#include <Arduino.h>
+
+#define TRUE        1
+#define FALSE       0
 
 ////////////////////////////////////////////////////////////////////////////////
 //NASTAVITVE DELOVANJA//////////////////////////////////////////////////////////
@@ -12,7 +14,7 @@
 
 //Cas v milisekundah
 #define CAS_ISKRENJE      3000
-#define CAS_VBRIZGAVANJE  4000
+#define CAS_VBRIZGAVANJE  5500
 #define CAS_OHLAJANJE     90000
 
 #define ST_PONOVNIH_POSKUSKOV_VZIGA 2
@@ -20,7 +22,7 @@
 //Nizja meja -> Svetleje more biti za uspesen vzig
 //Visja meja -> Uspesen vzig v temnejsem okolju
 //Nastavi mejo med 5 in 500
-#define MEJA_VZIGA_FOTOCELICA 95
+#define MEJA_VZIGA_FOTOCELICA 180
 
 #define TERMISTOR_R2               10000
 #define TERMISTOR_UPORNOST         10000
@@ -32,7 +34,10 @@
 //KONEC NASTAVITEV//////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
 
+#include <Arduino.h>
+
 //NE SPREMINJAJ!!!
+#define EXTERNAL_OSCILATOR FALSE
 
 #define OUTPUT_PORTB PORTB
 #define OUTPUT_DDRB  DDRB
@@ -72,12 +77,18 @@
 #define LDR_ADC_PIN A3
 #define NTC_ADC_PIN A4
 
+#if EXTERNAL_OSCILATOR != TRUE
+  #define SETTINGS_TWO_RELAY_PIN 6
+  #define SETTINGS_SETTING_TWO_PIN 7
+
+  #define SETTINGS_PORTB PORTB
+  #define SETTINGS_DDRB  DDRB
+  #define SETTINGS_PINB  PINB
+#endif
+
 #define FOTOCELICA_GORI(vrednost) ((vrednost) <= MEJA_VZIGA_FOTOCELICA)
 #define STIKALO_ON (!(INPUT_PINC & _BV(INPUT_PIN_STIKALO)))
 #define TERMISTOR_PROBLEM(vrednost) ((vrednost) < TERMISTOR_MEJA_NAPAKA)
-
-#define TRUE        1
-#define FALSE       0
 
 #define PRINT(x) {}
 #define PRINTLN(x) {}

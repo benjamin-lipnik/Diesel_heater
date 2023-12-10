@@ -56,6 +56,8 @@ const uint8_t minus = _BV(6);
 const uint8_t char_e = 0b01110011;
 const volatile int8_t rotacijska_tabela[16] = {0,1,-1,0,-1,0,0,1,1,0,0,-1,0,-1,1,0};
 
+volatile uint8_t dvorelejni_izhod = 0;
+
 struct {
   volatile int8_t values_on_display[2];
   volatile uint8_t digits_buffer[4];
@@ -139,6 +141,10 @@ void setup() {
 
   #endif
 
+  //Setting jumpers mesure
+  dvorelejni_izhod = !(SETTINGS_PINB & _BV(SETTINGS_TWO_RELAY_PIN));
+
+  // IO
   OUTPUT_DDRB |= _BV(OUTPUT_PIN_ISKRA) | _BV(OUTPUT_PIN_VENTIL) | _BV(OUTPUT_PIN_VENTILATOR);
   INPUT_PORTC |= _BV(INPUT_PIN_ENCODER_1) | _BV(INPUT_PIN_ENCODER_2); //PULLUPI
 
@@ -240,7 +246,8 @@ void starting_state() {
     OUTPUT_PORTB &= ~_BV(OUTPUT_PIN_ISKRA);
 
     //Poglej ce se ne gori.
-    if(!FOTOCELICA_GORI(Sensor_data.ldr_filtered)) {
+    //if(!FOTOCELICA_GORI(Sensor_data.ldr_filtered)) { 
+    if(!FOTOCELICA_GORI(Sensor_data.ldr_min_filtered)) { 
       if(retry_cnt++ < ST_PONOVNIH_POSKUSKOV_VZIGA) {
         //Se enkrat proba
         //izklopi vse
@@ -314,7 +321,8 @@ void stopping_state() {
     //izklopi iskro
     OUTPUT_PORTB &= ~_BV(OUTPUT_PIN_ISKRA);
     stopping_state = STATE_STOPPING_COOLING;
-    set_wait(CAS_OHLAJANJE);
+    if(!dvorelejni_izhod)
+      set_wait(CAS_OHLAJANJE);
   }
   else if(stopping_state == STATE_STOPPING_COOLING) {
     //izklopim ventilator
@@ -336,7 +344,8 @@ void error_state() {
   if(error_substate == 0) {
     //izklopi ventil in iskro/grelec
     OUTPUT_PORTB &= ~(_BV(OUTPUT_PIN_ISKRA) | _BV(OUTPUT_PIN_VENTIL));
-    set_wait(CAS_OHLAJANJE);
+    if(!dvorelejni_izhod)
+      set_wait(CAS_OHLAJANJE);
     error_substate++;
   }
   else if(error_substate == 1) {
@@ -469,13 +478,9 @@ ISR(TIMER1_CAPT_vect) {
   Sensor_data.ldr_raw = analogRead(LDR_ADC_PIN);
   Sensor_data.ntc_raw = analogRead(NTC_ADC_PIN);
 
-  if(Sensor_data.ldr_raw < Sensor_data.ldr_filtered) {
-    Sensor_data.ldr_filtered = Sensor_data.ldr_filtered * 0.99f + (float)Sensor_data.ldr_raw * 0.01f;
-  }
-  else {
-    Sensor_data.ldr_filtered = Sensor_data.ldr_filtered * 0.995f + (float)Sensor_data.ldr_raw * 0.005f;
-  }
-  if(++Sensor_data.ldr_min_counter >= 120) {
+  Sensor_data.ldr_filtered = Sensor_data.ldr_filtered * 0.995f + (float)Sensor_data.ldr_raw * 0.005f;
+
+  if(++Sensor_data.ldr_min_counter >= 80) {
     Sensor_data.ldr_min_counter = 0;
     Sensor_data.ldr_min_filtered = Sensor_data.ldr_min_filtered * 0.4f + Sensor_data.ldr_min * 0.6f;
     Sensor_data.ldr_min = 0xffff;
